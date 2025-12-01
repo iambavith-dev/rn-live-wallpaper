@@ -1,12 +1,12 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { requireNativeModule } from "expo-modules-core";
 
-import { RnLiveWallpaperModuleEvents } from './RnLiveWallpaper.types';
+type SaveLivePhotoResult = string; // "Saved"
 
-declare class RnLiveWallpaperModule extends NativeModule<RnLiveWallpaperModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+interface RnLiveWallpaperModule {
+  saveLivePhoto(photoUri: string, videoUri: string): Promise<SaveLivePhotoResult>;
 }
 
-// This call loads the native module object from the JSI.
-export default requireNativeModule<RnLiveWallpaperModule>('RnLiveWallpaper');
+const RnLiveWallpaper: RnLiveWallpaperModule =
+  requireNativeModule<RnLiveWallpaperModule>("RnLiveWallpaper");
+
+export default RnLiveWallpaper;

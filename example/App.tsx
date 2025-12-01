@@ -1,73 +1,59 @@
-import { useEvent } from 'expo';
-import RnLiveWallpaper, { RnLiveWallpaperView } from 'rn-live-wallpaper';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Button, View } from "react-native"
+import RnLiveWallpaper from 'rn-live-wallpaper';
+import * as FileSystem from 'expo-file-system/legacy';
 
-export default function App() {
-  const onChangePayload = useEvent(RnLiveWallpaper, 'onChange');
+const App = () => {
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{RnLiveWallpaper.PI}</Text>
-        </Group>
-        <Group name="Functions">
-          <Text>{RnLiveWallpaper.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await RnLiveWallpaper.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <RnLiveWallpaperView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
-        </Group>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+    const onProgress = async () => {
+        const IMAGE =
+            "https://one4wall.nyc3.cdn.digitaloceanspaces.com/dev/uploads/live/2/IMG_2745.HEIC";
+        const VIDEO =
+            "https://one4wall.nyc3.cdn.digitaloceanspaces.com/dev/uploads/live/2/IMG_2745.MOV";
 
-function Group(props: { name: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
-    </View>
-  );
-}
+        try {
 
-const styles = {
-  header: {
-    fontSize: 30,
-    margin: 20,
-  },
-  groupHeader: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  group: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#eee',
-  },
-  view: {
-    flex: 1,
-    height: 200,
-  },
+            const localVideoPath = FileSystem.documentDirectory + "live1.mov";
+            const localImagePath = FileSystem.documentDirectory + "live1.heic";
+
+            const videoDownload = FileSystem.createDownloadResumable(
+                VIDEO,
+                localVideoPath,
+                {}
+            );
+            const imageDownload = FileSystem.createDownloadResumable(
+                IMAGE,
+                localImagePath,
+                {}
+            );
+
+            const [videoRes, imageRes] = await Promise.all([
+                videoDownload.downloadAsync(),
+                imageDownload.downloadAsync(),
+            ]);
+
+            if (!videoRes?.uri || !imageRes?.uri) {
+                throw new Error("Download failed - invalid URIs");
+            }
+
+            console.log(videoRes.uri, imageRes.uri)
+
+            await RnLiveWallpaper.saveLivePhoto(imageRes.uri, videoRes.uri)
+
+            console.log("done")
+
+        } catch (error: any) {
+            console.log("onProgress error:", error);
+        }
+    };
+
+    return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} >
+            <Button
+                title="Convert Video"
+                onPress={onProgress}
+            />
+        </View>
+    )
 };
+
+export default App;

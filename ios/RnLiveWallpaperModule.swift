@@ -1,48 +1,70 @@
+import Foundation
 import ExpoModulesCore
+import Photos
 
 public class RnLiveWallpaperModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('RnLiveWallpaper')` in JavaScript.
+    
     Name("RnLiveWallpaper")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
+    // JS: await RnLiveWallpaper.saveLivePhoto(photoUri, videoUri)
+    AsyncFunction("saveLivePhoto") { (photoUri: String, videoUri: String) -> String in
+      return try await saveLivePhoto(photoUri: photoUri, videoUri: videoUri)
     }
+  }
+}
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+// MARK: - Save Live Photo Implementation
+extension RnLiveWallpaperModule {
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
+  func saveLivePhoto(photoUri: String, videoUri: String) async throws -> String {
+    guard let photoURL = URL(string: photoUri),
+          let videoURL = URL(string: videoUri) else {
+      throw NSError(domain: "RnLiveWallpaper", code: 1, userInfo: [
+        NSLocalizedDescriptionKey: "Invalid URI for photo or video."
       ])
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(RnLiveWallpaperView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: RnLiveWallpaperView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
-        }
-      }
+    // Request permission first
+    let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+    if status == .notDetermined {
+      let _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+    }
 
-      Events("onLoad")
+    let newStatus = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+    guard newStatus == .authorized || newStatus == .limited else {
+      throw NSError(domain: "RnLiveWallpaper", code: 2, userInfo: [
+        NSLocalizedDescriptionKey: "Photo library permission not granted."
+      ])
+    }
+
+    return try await withCheckedThrowingContinuation { continuation in
+      PHPhotoLibrary.shared().performChanges({
+
+        let request = PHAssetCreationRequest.forAsset()
+
+        // Add the still image
+        request.addResource(with: .photo, fileURL: photoURL, options: nil)
+
+        // Add the paired video for Live Photo
+        let options = PHAssetResourceCreationOptions()
+        options.shouldMoveFile = false
+
+        request.addResource(with: .pairedVideo, fileURL: videoURL, options: options)
+
+      }, completionHandler: { success, error in
+        if let error = error {
+          continuation.resume(throwing: error)
+        } else if success {
+          continuation.resume(returning: "Saved")
+        } else {
+          continuation.resume(throwing: NSError(
+            domain: "RnLiveWallpaper",
+            code: 3,
+            userInfo: [NSLocalizedDescriptionKey: "Unknown error while saving Live Photo."]
+          ))
+        }
+      })
     }
   }
 }
