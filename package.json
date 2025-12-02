@@ -1,6 +1,6 @@
 {
   "name": "rn-live-wallpaper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React Native Live Wallpaper",
   "main": "build/index.js",
   "types": "build/index.d.ts",

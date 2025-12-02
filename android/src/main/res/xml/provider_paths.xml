@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- allow exposing files from Context.getFilesDir() (FileSystem.documentDirectory) -->
+    <files-path name="internal_files" path="." />
+
+    <!-- optional: expose external storage root (if needed) -->
+    <external-path name="external_files" path="." />
+
+    <!-- optional: expose Movies folder -->
+    <external-path name="movies" path="Movies/" />
+</paths>
